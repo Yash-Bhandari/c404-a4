@@ -68,10 +68,19 @@ function drawCircle(context,entity) {
         var x = entity["x"];
         var y = entity["y"];
         //moveTo(x,y);
+        color = entity["colour"];
         fillStyle = entity["colour"];
         strokeStyle = fillStyle;
-        arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);  
+
+        radius = entity["radius"] ? entity['radius']: 20;
+
+        arc(x, y, radius, 0, 2.0 * Math.PI, false);  
         stroke();                                
+        const gradient = createRadialGradient(x,y,0,x,y,radius);
+        gradient.addColorStop(0, 'white');
+        gradient.addColorStop(1, color);
+        fillStyle = gradient;
+        fill();
     }
 }
 
@@ -154,11 +163,12 @@ function addEntity(entity, data) {
         },
         body: JSON.stringify(data)
     }).then(() => {
-        console.log('I am here', entity, world[entity], uuid)
+        // successfully created entity on server
         if (world[entity] && world[entity]['uuid'] == uuid) {
             world[entity]['justCreated'] = false;
         }
     }, () => {
+        // failed to create entity on server, delete it from local world
         if (world[entity] && world[entity]['uuid'] == uuid) {
             world[entity] = undefined        
         }
@@ -271,11 +281,11 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'blue', radius: 20});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'red', radius: 20});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
