@@ -40,6 +40,9 @@ function sendJSONXMLHTTPRequest(url, objects, callback) {
                 if (xhr.status==200) {
                     //XXX: parse some JSON from the request!
                     //XXX: Pass the data to the callback!
+                    console.log(xhr)
+                    var data = JSON.parse(xhr.responseText);
+                    callback(data)
                 }
             } 
             catch(e) {
@@ -47,6 +50,8 @@ function sendJSONXMLHTTPRequest(url, objects, callback) {
             }
         }
     };
+    xhr.open("GET", url, true);
+    xhr.send(JSON.stringify(objects));
     //XXX: POST to a URL
     //XXX: set the mimetype and the accept headers!
     // Remember to use application/json !
@@ -135,10 +140,29 @@ function getPosition(e) {
 
 
 function addEntity(entity, data) {
-    world[entity] = data;
+    world[entity] = {...data};
+    const uuid = crypto.randomUUID()
+    world[entity]['uuid'] = uuid;
+    world[entity]['justCreated'] = true;
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just  modified!
-
+    fetch('/entity/'+entity, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(() => {
+        console.log('I am here', entity, world[entity], uuid)
+        if (world[entity] && world[entity]['uuid'] == uuid) {
+            world[entity]['justCreated'] = false;
+        }
+    }, () => {
+        if (world[entity] && world[entity]['uuid'] == uuid) {
+            world[entity] = undefined        
+        }
+    })
 }
 
 var counter = 0;
@@ -261,7 +285,18 @@ mouse.mousedraggers.push(function(x,y,clicked,e) {
 
 
 function update() {
-    //XXX: TODO Get the world from the webservice using a XMLHTTPRequest
+    fetch("/world")
+        .then(response => response.json())
+        .then(data => {
+            console.log('updating!')
+            Object.keys(data).forEach(entityName => {
+                existingEntity = world[entityName];
+                if (!existingEntity || !existingEntity.justCreated) {
+                    world[entityName] = data[entityName];
+                }
+            });
+            drawNextFrame();
+        })
     drawFrame();
 }
 
